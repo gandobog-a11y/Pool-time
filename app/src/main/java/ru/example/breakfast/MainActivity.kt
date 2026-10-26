@@ -11,7 +11,6 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
@@ -64,6 +63,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         window.statusBarColor = Color.rgb(18, 25, 38)
         window.navigationBarColor = Color.rgb(18, 25, 38)
 
@@ -88,17 +88,37 @@ class MainActivity : Activity() {
         val now = Calendar.getInstance()
         val initialized = prefs.getBoolean(KEY_INITIALIZED, false)
 
-        entryHour = prefs.getInt(KEY_ENTRY_HOUR, now.get(Calendar.HOUR_OF_DAY))
-        entryMinute = prefs.getInt(KEY_ENTRY_MINUTE, now.get(Calendar.MINUTE))
-        changingMinutes = prefs.getInt(KEY_CHANGING, DEFAULT_CHANGING_MINUTES)
-        reserveMinutes = prefs.getInt(KEY_RESERVE, DEFAULT_RESERVE_MINUTES)
+        entryHour = prefs.getInt(
+            KEY_ENTRY_HOUR,
+            now.get(Calendar.HOUR_OF_DAY)
+        )
 
-        entryTimestampMillis = prefs.getLong(KEY_ENTRY_TIMESTAMP, 0L)
+        entryMinute = prefs.getInt(
+            KEY_ENTRY_MINUTE,
+            now.get(Calendar.MINUTE)
+        )
+
+        changingMinutes = prefs.getInt(
+            KEY_CHANGING,
+            DEFAULT_CHANGING_MINUTES
+        )
+
+        reserveMinutes = prefs.getInt(
+            KEY_RESERVE,
+            DEFAULT_RESERVE_MINUTES
+        )
+
+        entryTimestampMillis = prefs.getLong(
+            KEY_ENTRY_TIMESTAMP,
+            0L
+        )
 
         if (!initialized || entryTimestampMillis == 0L) {
             // Для старых установок восстанавливаем сегодняшнюю дату
-            // из сохранённого времени. Будущее время остаётся будущим.
-            entryTimestampMillis = calendarForToday(entryHour, entryMinute).timeInMillis
+            // из сохранённого времени.
+            entryTimestampMillis =
+                calendarForToday(entryHour, entryMinute).timeInMillis
+
             saveSettings()
         }
     }
@@ -114,7 +134,10 @@ class MainActivity : Activity() {
             .apply()
     }
 
-    private fun calendarForToday(hour: Int, minute: Int): Calendar =
+    private fun calendarForToday(
+        hour: Int,
+        minute: Int
+    ): Calendar =
         Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
@@ -130,9 +153,10 @@ class MainActivity : Activity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(24))
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            setPadding(dp(18), dp(8), dp(18), dp(24))
         }
+
         scrollView.addView(
             root,
             android.widget.FrameLayout.LayoutParams(
@@ -168,16 +192,30 @@ class MainActivity : Activity() {
 
         titleBlock.addView(title)
         titleBlock.addView(subtitle)
-        header.addView(titleBlock, LinearLayout.LayoutParams(0, dp(64), 1f))
+
+        header.addView(
+            titleBlock,
+            LinearLayout.LayoutParams(0, dp(64), 1f)
+        )
 
         val settingsButton = Button(this).apply {
             text = "⚙"
             textSize = 24f
             setTextColor(Color.WHITE)
-            background = roundedBackground(Color.rgb(45, 57, 76), 14)
-            setOnClickListener { showSettingsDialog() }
+            background = roundedBackground(
+                Color.rgb(45, 57, 76),
+                14
+            )
+            setOnClickListener {
+                showSettingsDialog()
+            }
         }
-        header.addView(settingsButton, LinearLayout.LayoutParams(dp(58), dp(52)))
+
+        header.addView(
+            settingsButton,
+            LinearLayout.LayoutParams(dp(58), dp(52))
+        )
+
         root.addView(header, matchWrap())
 
         addLabel(root, "Вход через турникет")
@@ -186,9 +224,15 @@ class MainActivity : Activity() {
             textSize = 34f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            background = roundedBackground(Color.rgb(45, 57, 76), 18)
-            setOnClickListener { showEntryTimePicker() }
+            background = roundedBackground(
+                Color.rgb(45, 57, 76),
+                18
+            )
+            setOnClickListener {
+                showEntryTimePicker()
+            }
         }
+
         root.addView(
             entryTimeButton,
             LinearLayout.LayoutParams(
@@ -200,8 +244,14 @@ class MainActivity : Activity() {
             }
         )
 
+        // Средний блок: время выхода из воды,
+        // а после наступления этого времени — обратный отсчёт.
         poolExitPanel = createPanel(Color.rgb(35, 105, 72))
-        addLabel(poolExitPanel, "ПОРА ВЫХОДИТЬ ИЗ БАССЕЙНА")
+
+        addLabel(
+            poolExitPanel,
+            "ПОРА ВЫХОДИТЬ ИЗ БАССЕЙНА"
+        )
 
         poolExitTimeText = TextView(this).apply {
             textSize = 48f
@@ -209,20 +259,35 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }
-        poolExitPanel.addView(poolExitTimeText, matchWrap().apply { topMargin = dp(8) })
+
+        poolExitPanel.addView(
+            poolExitTimeText,
+            matchWrap().apply {
+                topMargin = dp(8)
+            }
+        )
 
         remainingText = TextView(this).apply {
             textSize = 18f
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }
-        poolExitPanel.addView(remainingText, matchWrap().apply { topMargin = dp(8) })
+
+        poolExitPanel.addView(
+            remainingText,
+            matchWrap().apply {
+                topMargin = dp(8)
+            }
+        )
 
         root.addView(
             poolExitPanel,
-            matchWrap().apply { bottomMargin = dp(18) }
+            matchWrap().apply {
+                bottomMargin = dp(18)
+            }
         )
 
+        // Нижний блок: крайний срок выхода через турникет.
         deadlinePanel = createPanel(Color.rgb(125, 35, 42))
 
         val deadlineTitle = TextView(this).apply {
@@ -232,7 +297,11 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }
-        deadlinePanel.addView(deadlineTitle, matchWrap())
+
+        deadlinePanel.addView(
+            deadlineTitle,
+            matchWrap()
+        )
 
         deadlineText = TextView(this).apply {
             textSize = 52f
@@ -240,7 +309,13 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }
-        deadlinePanel.addView(deadlineText, matchWrap().apply { topMargin = dp(8) })
+
+        deadlinePanel.addView(
+            deadlineText,
+            matchWrap().apply {
+                topMargin = dp(8)
+            }
+        )
 
         val deadlineHint = TextView(this).apply {
             text = "Последний срок выхода через турникет"
@@ -248,11 +323,19 @@ class MainActivity : Activity() {
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
         }
-        deadlinePanel.addView(deadlineHint, matchWrap().apply { topMargin = dp(8) })
+
+        deadlinePanel.addView(
+            deadlineHint,
+            matchWrap().apply {
+                topMargin = dp(8)
+            }
+        )
 
         root.addView(
             deadlinePanel,
-            matchWrap().apply { bottomMargin = dp(16) }
+            matchWrap().apply {
+                bottomMargin = dp(16)
+            }
         )
 
         settingsSummary = TextView(this).apply {
@@ -260,6 +343,7 @@ class MainActivity : Activity() {
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
         }
+
         root.addView(settingsSummary, matchWrap())
 
         setContentView(scrollView)
@@ -275,11 +359,19 @@ class MainActivity : Activity() {
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(16), dp(22), dp(16), dp(22))
+            setPadding(
+                dp(16),
+                dp(22),
+                dp(16),
+                dp(22)
+            )
             background = roundedBackground(color, 22)
         }
 
-    private fun addLabel(parent: LinearLayout, value: String) {
+    private fun addLabel(
+        parent: LinearLayout,
+        value: String
+    ) {
         val label = TextView(this).apply {
             text = value
             textSize = 15f
@@ -287,6 +379,7 @@ class MainActivity : Activity() {
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER
         }
+
         parent.addView(
             label,
             LinearLayout.LayoutParams(
@@ -305,7 +398,10 @@ class MainActivity : Activity() {
             { _, hour, minute ->
                 entryHour = hour
                 entryMinute = minute
-                entryTimestampMillis = calendarForToday(hour, minute).timeInMillis
+
+                entryTimestampMillis =
+                    calendarForToday(hour, minute).timeInMillis
+
                 saveSettings()
                 updateScreen()
             },
@@ -318,16 +414,39 @@ class MainActivity : Activity() {
     private fun showSettingsDialog() {
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), 0)
+            setPadding(
+                dp(24),
+                dp(8),
+                dp(24),
+                0
+            )
         }
 
-        val changingInput = createNumberInput(changingMinutes.toString())
-        val reserveInput = createNumberInput(reserveMinutes.toString())
+        val changingInput =
+            createNumberInput(changingMinutes.toString())
 
-        addLabel(container, "Время на переодевание, минут")
-        container.addView(changingInput, fixedHeight(dp(54)))
-        addLabel(container, "Неприкосновенный запас, минут")
-        container.addView(reserveInput, fixedHeight(dp(54)))
+        val reserveInput =
+            createNumberInput(reserveMinutes.toString())
+
+        addLabel(
+            container,
+            "Время на переодевание, минут"
+        )
+
+        container.addView(
+            changingInput,
+            fixedHeight(dp(54))
+        )
+
+        addLabel(
+            container,
+            "Неприкосновенный запас, минут"
+        )
+
+        container.addView(
+            reserveInput,
+            fixedHeight(dp(54))
+        )
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Настройки")
@@ -337,47 +456,66 @@ class MainActivity : Activity() {
             .create()
 
         dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val changingValue = changingInput.text.toString().toIntOrNull()
-                val reserveValue = reserveInput.text.toString().toIntOrNull()
+            dialog.getButton(
+                AlertDialog.BUTTON_POSITIVE
+            ).setOnClickListener {
+                val changingValue =
+                    changingInput.text.toString().toIntOrNull()
 
-                if (changingValue == null || reserveValue == null ||
-                    changingValue < 0 || reserveValue < 0
+                val reserveValue =
+                    reserveInput.text.toString().toIntOrNull()
+
+                if (
+                    changingValue == null ||
+                    reserveValue == null ||
+                    changingValue < 0 ||
+                    reserveValue < 0
                 ) {
                     Toast.makeText(
                         this,
                         "Введи целое число не меньше нуля",
                         Toast.LENGTH_SHORT
                     ).show()
+
                     return@setOnClickListener
                 }
 
-                if (changingValue + reserveValue > TOTAL_MINUTES) {
+                if (
+                    changingValue + reserveValue >
+                    TOTAL_MINUTES
+                ) {
                     Toast.makeText(
                         this,
                         "Сумма настроек не должна превышать 75 минут",
                         Toast.LENGTH_LONG
                     ).show()
+
                     return@setOnClickListener
                 }
 
                 changingMinutes = changingValue
                 reserveMinutes = reserveValue
+
                 saveSettings()
                 updateScreen()
                 dialog.dismiss()
             }
         }
+
         dialog.show()
     }
 
-    private fun fixedHeight(height: Int) =
+    private fun fixedHeight(
+        height: Int
+    ): LinearLayout.LayoutParams =
         LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             height
         )
 
-    private fun createNumberInput(value: String): EditText =
+    private fun createNumberInput(
+        value: String
+    ): EditText =
         EditText(this).apply {
             setText(value)
             textSize = 20f
@@ -389,66 +527,155 @@ class MainActivity : Activity() {
 
     private fun updateScreen() {
         val nowMillis = System.currentTimeMillis()
-        val entryTotal = entryHour * 60 + entryMinute
-        val elapsedMillis = nowMillis - entryTimestampMillis
-        val waitingForEntry = elapsedMillis < 0L
 
-        // Если выбранное время ещё впереди, не считаем его вчерашним.
-        // Время ожидания округляется вверх, чтобы отображать 1 минуту,
-        // пока до входа остаётся меньше минуты.
+        val entryTotal =
+            entryHour * 60 + entryMinute
+
+        val elapsedMillis =
+            nowMillis - entryTimestampMillis
+
+        val waitingForEntry =
+            elapsedMillis < 0L
+
+        // Пока время входа впереди, прошедшее время равно нулю.
         val elapsedMinutes = if (waitingForEntry) {
             0
         } else {
             (elapsedMillis / 60_000L).toInt()
         }
 
+        // Округляем ожидание вверх, чтобы не показывать 0 минут,
+        // пока вход ещё не наступил.
         val waitMinutes = if (waitingForEntry) {
             ((-elapsedMillis + 59_999L) / 60_000L).toInt()
         } else {
             0
         }
 
-        val poolExitOffset = TOTAL_MINUTES - changingMinutes - reserveMinutes
-        val poolExitTime = (entryTotal + poolExitOffset) % 1440
-        val deadlineTime = (entryTotal + TOTAL_MINUTES) % 1440
+        val poolExitOffset =
+            TOTAL_MINUTES - changingMinutes - reserveMinutes
 
-        val poolMinutesLeft = poolExitOffset - elapsedMinutes
-        val deadlineMinutesLeft = TOTAL_MINUTES - elapsedMinutes
+        val poolExitTime =
+            (entryTotal + poolExitOffset) % 1440
+
+        val deadlineTime =
+            (entryTotal + TOTAL_MINUTES) % 1440
+
+        // Рассчитываем реальные моменты выхода по timestamp,
+        // поэтому переход через полночь работает корректно.
+        val poolExitTimestamp =
+            entryTimestampMillis + poolExitOffset * 60_000L
+
+        val deadlineTimestamp =
+            entryTimestampMillis + TOTAL_MINUTES * 60_000L
+
+        val poolMinutesLeft =
+            poolExitOffset - elapsedMinutes
+
+        val deadlineMinutesLeft =
+            TOTAL_MINUTES - elapsedMinutes
+
+        // Обратный отсчёт среднего циферблата начинается
+        // только после наступления времени выхода из воды.
+        val poolCountdownStarted =
+            !waitingForEntry && nowMillis >= poolExitTimestamp
 
         entryTimeButton.text = formatTime(entryTotal)
-        poolExitTimeText.text = formatTime(poolExitTime)
+
+        if (poolCountdownStarted) {
+            // До дедлайна показываем оставшееся время в ММ:СС.
+            // После дедлайна фиксируем значение на 00:00.
+            val millisLeft =
+                (deadlineTimestamp - nowMillis).coerceAtLeast(0L)
+
+            // Округление вверх позволяет начать с 15:00,
+            // а не с 14:59 в первую же секунду.
+            val secondsLeft =
+                (millisLeft + 999L) / 1000L
+
+            poolExitTimeText.text =
+                formatMinutesSeconds(secondsLeft)
+        } else {
+            // До времени выхода из бассейна показываем часы.
+            poolExitTimeText.text =
+                formatTime(poolExitTime)
+        }
+
+        // Нижний циферблат всегда показывает крайнее время выхода.
         deadlineText.text = formatTime(deadlineTime)
 
         remainingText.text = when {
-            waitingForEntry -> "До входа: ${formatDuration(waitMinutes)}"
+            waitingForEntry ->
+                "До входа: ${formatDuration(waitMinutes)}"
+
             poolMinutesLeft > 0 ->
                 "До выхода из воды: ${formatDuration(poolMinutesLeft)}"
-            poolMinutesLeft == 0 -> "ВЫХОДИТЬ ИЗ ВОДЫ СЕЙЧАС!"
-            else -> "ВРЕМЯ ВЫХОДИТЬ ИЗ ВОДЫ УЖЕ ПРОШЛО"
+
+            poolMinutesLeft == 0 ->
+                "ВЫХОДИТЬ ИЗ ВОДЫ СЕЙЧАС!"
+
+            else ->
+                "ВРЕМЯ ВЫХОДИТЬ ИЗ ВОДЫ УЖЕ ПРОШЛО"
         }
 
         val poolColor = when {
-            waitingForEntry -> Color.rgb(35, 105, 72)
-            poolMinutesLeft > 10 -> Color.rgb(35, 105, 72)
-            poolMinutesLeft > 5 -> Color.rgb(190, 135, 20)
-            else -> Color.rgb(190, 35, 42)
+            waitingForEntry ->
+                Color.rgb(35, 105, 72)
+
+            poolMinutesLeft > 10 ->
+                Color.rgb(35, 105, 72)
+
+            poolMinutesLeft > 5 ->
+                Color.rgb(190, 135, 20)
+
+            else ->
+                Color.rgb(190, 35, 42)
         }
-        poolExitPanel.background = roundedBackground(poolColor, 22)
+
+        poolExitPanel.background =
+            roundedBackground(poolColor, 22)
 
         val deadlineColor = when {
-            waitingForEntry -> Color.rgb(125, 35, 42)
-            deadlineMinutesLeft > 10 -> Color.rgb(125, 35, 42)
-            deadlineMinutesLeft > 5 -> Color.rgb(190, 35, 42)
-            else -> Color.rgb(110, 0, 0)
+            waitingForEntry ->
+                Color.rgb(125, 35, 42)
+
+            deadlineMinutesLeft > 10 ->
+                Color.rgb(125, 35, 42)
+
+            deadlineMinutesLeft > 5 ->
+                Color.rgb(190, 35, 42)
+
+            else ->
+                Color.rgb(110, 0, 0)
         }
-        deadlinePanel.background = roundedBackground(deadlineColor, 22)
+
+        deadlinePanel.background =
+            roundedBackground(deadlineColor, 22)
 
         settingsSummary.text =
             "Переодевание: $changingMinutes мин.  •  Запас: $reserveMinutes мин."
     }
 
-    private fun formatTime(totalMinutes: Int): String {
-        val normalized = (totalMinutes % 1440 + 1440) % 1440
+    private fun formatMinutesSeconds(
+        totalSeconds: Long
+    ): String {
+        val minutes = totalSeconds / 60L
+        val seconds = totalSeconds % 60L
+
+        return String.format(
+            Locale.getDefault(),
+            "%02d:%02d",
+            minutes,
+            seconds
+        )
+    }
+
+    private fun formatTime(
+        totalMinutes: Int
+    ): String {
+        val normalized =
+            (totalMinutes % 1440 + 1440) % 1440
+
         return String.format(
             Locale.getDefault(),
             "%02d:%02d",
@@ -457,9 +684,12 @@ class MainActivity : Activity() {
         )
     }
 
-    private fun formatDuration(minutes: Int): String {
+    private fun formatDuration(
+        minutes: Int
+    ): String {
         val hours = minutes / 60
         val remaining = minutes % 60
+
         return if (hours > 0) {
             "${hours} ч ${remaining} мин"
         } else {
@@ -467,7 +697,10 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun roundedBackground(color: Int, radiusDp: Int): GradientDrawable =
+    private fun roundedBackground(
+        color: Int,
+        radiusDp: Int
+    ): GradientDrawable =
         GradientDrawable().apply {
             setColor(color)
             cornerRadius = dp(radiusDp).toFloat()
