@@ -52,7 +52,6 @@ class MainActivity : Activity() {
     private lateinit var poolExitPanel: LinearLayout
     private lateinit var deadlinePanel: LinearLayout
     private lateinit var currentTimePanel: LinearLayout
-    private lateinit var settingsSummary: TextView
 
     private var entryHour = 0
     private var entryMinute = 0
@@ -195,7 +194,7 @@ class MainActivity : Activity() {
         }
 
         val subtitle = TextView(this).apply {
-            text = "75 минут до капитуляции"
+            text = "75 минут аэробной нагрузки"
             textSize = 14f
             setTextColor(Color.LTGRAY)
             gravity = Gravity.CENTER_VERTICAL
@@ -280,7 +279,7 @@ class MainActivity : Activity() {
         deadlinePanel = createPanel(Color.rgb(125, 35, 42))
 
         val deadlineTitle = TextView(this).apply {
-            text = "ВРЕМЯ ПИЗДЕЦА"
+            text = "ВРЕМЯ ВЫХОДА"
             textSize = 29f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
@@ -333,14 +332,6 @@ class MainActivity : Activity() {
             currentTimePanel,
             matchWrap().apply { bottomMargin = dp(16) }
         )
-
-        settingsSummary = TextView(this).apply {
-            textSize = 14f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-        }
-
-        root.addView(settingsSummary, matchWrap())
 
         setContentView(scrollView)
     }
@@ -538,11 +529,13 @@ class MainActivity : Activity() {
                 deadlineCalendar.get(Calendar.MINUTE)
         )
 
-        currentTimeText.text = formatTime(
-            Calendar.getInstance().let {
-                it.get(Calendar.HOUR_OF_DAY) * 60 +
-                    it.get(Calendar.MINUTE)
-            }
+        val currentCalendar = Calendar.getInstance()
+        currentTimeText.text = String.format(
+            Locale.getDefault(),
+            "%02d:%02d:%02d",
+            currentCalendar.get(Calendar.HOUR_OF_DAY),
+            currentCalendar.get(Calendar.MINUTE),
+            currentCalendar.get(Calendar.SECOND)
         )
 
         remainingText.text = when {
@@ -590,11 +583,6 @@ class MainActivity : Activity() {
 
         currentTimePanel.background =
             roundedBackground(Color.BLACK, 22)
-
-        settingsSummary.text =
-            "Переодевание: $changingMinutes мин.  •  " +
-                "Жёлтый: $yellowMinutes мин.  •  " +
-                "Красный: $redMinutes мин."
     }
 
     private fun formatMinutesSeconds(totalSeconds: Long): String {
