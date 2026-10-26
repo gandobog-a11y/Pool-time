@@ -131,7 +131,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(24))
+            setPadding(dp(18), dp(8), dp(18), dp(24))
         }
         scrollView.addView(
             root,
