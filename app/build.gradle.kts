@@ -8,7 +8,7 @@ namespace = "ru.example.pool_time"
 compileSdk = 36
 
 defaultConfig {
-    applicationId = "ru.example.pool-time"
+    applicationId = "ru.example.pool_time"
     minSdk = 23
     targetSdk = 35
     versionCode = 2
