@@ -2,6 +2,8 @@
 
     <application
         android:allowBackup="true"
+        android:icon="@drawable/pool_icon"
+        android:roundIcon="@drawable/pool_icon"
         android:label="Время плавать!"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
