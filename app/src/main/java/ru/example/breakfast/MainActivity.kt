@@ -135,7 +135,7 @@ class MainActivity : Activity() {
         }
         scrollView.addView(
             root,
-            ScrollView.LayoutParams(
+            android.widget.FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
