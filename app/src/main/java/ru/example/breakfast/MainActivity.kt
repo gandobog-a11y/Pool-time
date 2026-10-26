@@ -26,15 +26,18 @@ class MainActivity : Activity() {
 
     companion object {
         private const val TOTAL_MINUTES = 75
+
         private const val DEFAULT_CHANGING_MINUTES = 10
-        private const val DEFAULT_RESERVE_MINUTES = 5
+        private const val DEFAULT_RED_MINUTES = 5
+        private const val DEFAULT_YELLOW_MINUTES = 5
 
         private const val PREFS_NAME = "pool_time_settings"
         private const val KEY_ENTRY_HOUR = "entry_hour"
         private const val KEY_ENTRY_MINUTE = "entry_minute"
         private const val KEY_ENTRY_TIMESTAMP = "entry_timestamp"
         private const val KEY_CHANGING = "changing_minutes"
-        private const val KEY_RESERVE = "reserve_minutes"
+        private const val KEY_RED = "red_minutes"
+        private const val KEY_YELLOW = "yellow_minutes"
         private const val KEY_INITIALIZED = "initialized"
     }
 
@@ -44,16 +47,20 @@ class MainActivity : Activity() {
     private lateinit var entryTimeButton: Button
     private lateinit var poolExitTimeText: TextView
     private lateinit var deadlineText: TextView
+    private lateinit var currentTimeText: TextView
     private lateinit var remainingText: TextView
     private lateinit var poolExitPanel: LinearLayout
     private lateinit var deadlinePanel: LinearLayout
+    private lateinit var currentTimePanel: LinearLayout
     private lateinit var settingsSummary: TextView
 
     private var entryHour = 0
     private var entryMinute = 0
     private var entryTimestampMillis = 0L
+
     private var changingMinutes = DEFAULT_CHANGING_MINUTES
-    private var reserveMinutes = DEFAULT_RESERVE_MINUTES
+    private var redMinutes = DEFAULT_RED_MINUTES
+    private var yellowMinutes = DEFAULT_YELLOW_MINUTES
 
     private val handlerTask = object : Runnable {
         override fun run() {
@@ -104,9 +111,14 @@ class MainActivity : Activity() {
             DEFAULT_CHANGING_MINUTES
         )
 
-        reserveMinutes = prefs.getInt(
-            KEY_RESERVE,
-            DEFAULT_RESERVE_MINUTES
+        redMinutes = prefs.getInt(
+            KEY_RED,
+            DEFAULT_RED_MINUTES
+        )
+
+        yellowMinutes = prefs.getInt(
+            KEY_YELLOW,
+            DEFAULT_YELLOW_MINUTES
         )
 
         entryTimestampMillis = prefs.getLong(
@@ -127,7 +139,8 @@ class MainActivity : Activity() {
             .putInt(KEY_ENTRY_MINUTE, entryMinute)
             .putLong(KEY_ENTRY_TIMESTAMP, entryTimestampMillis)
             .putInt(KEY_CHANGING, changingMinutes)
-            .putInt(KEY_RESERVE, reserveMinutes)
+            .putInt(KEY_RED, redMinutes)
+            .putInt(KEY_YELLOW, yellowMinutes)
             .putBoolean(KEY_INITIALIZED, true)
             .apply()
     }
@@ -152,8 +165,6 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-
-            // Увеличенный отступ сверху
             setPadding(dp(18), dp(48), dp(18), dp(24))
         }
 
@@ -202,10 +213,7 @@ class MainActivity : Activity() {
             text = "⚙"
             textSize = 24f
             setTextColor(Color.WHITE)
-            background = roundedBackground(
-                Color.rgb(45, 57, 76),
-                14
-            )
+            background = roundedBackground(Color.rgb(45, 57, 76), 14)
             setOnClickListener { showSettingsDialog() }
         }
 
@@ -222,10 +230,7 @@ class MainActivity : Activity() {
             textSize = 34f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.WHITE)
-            background = roundedBackground(
-                Color.rgb(45, 57, 76),
-                18
-            )
+            background = roundedBackground(Color.rgb(45, 57, 76), 18)
             setOnClickListener { showEntryTimePicker() }
         }
 
@@ -242,10 +247,7 @@ class MainActivity : Activity() {
 
         poolExitPanel = createPanel(Color.rgb(35, 105, 72))
 
-        addLabel(
-            poolExitPanel,
-            "ПОРА ВЫХОДИТЬ ИЗ БАССЕЙНА"
-        )
+        addLabel(poolExitPanel, "ОСТАЛОСЬ ВРЕМЕНИ")
 
         poolExitTimeText = TextView(this).apply {
             textSize = 48f
@@ -313,6 +315,22 @@ class MainActivity : Activity() {
 
         root.addView(
             deadlinePanel,
+            matchWrap().apply { bottomMargin = dp(8) }
+        )
+
+        currentTimePanel = createPanel(Color.BLACK)
+
+        currentTimeText = TextView(this).apply {
+            textSize = 52f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+        }
+
+        currentTimePanel.addView(currentTimeText, matchWrap())
+
+        root.addView(
+            currentTimePanel,
             matchWrap().apply { bottomMargin = dp(16) }
         )
 
@@ -371,10 +389,8 @@ class MainActivity : Activity() {
             { _, hour, minute ->
                 entryHour = hour
                 entryMinute = minute
-
                 entryTimestampMillis =
                     calendarForToday(hour, minute).timeInMillis
-
                 saveSettings()
                 updateScreen()
             },
@@ -390,17 +406,18 @@ class MainActivity : Activity() {
             setPadding(dp(24), dp(8), dp(24), 0)
         }
 
-        val changingInput =
-            createNumberInput(changingMinutes.toString())
-
-        val reserveInput =
-            createNumberInput(reserveMinutes.toString())
+        val changingInput = createNumberInput(changingMinutes.toString())
+        val yellowInput = createNumberInput(yellowMinutes.toString())
+        val redInput = createNumberInput(redMinutes.toString())
 
         addLabel(container, "Время на переодевание, минут")
         container.addView(changingInput, fixedHeight(dp(54)))
 
-        addLabel(container, "Неприкосновенный запас, минут")
-        container.addView(reserveInput, fixedHeight(dp(54)))
+        addLabel(container, "Жёлтый уровень, минут")
+        container.addView(yellowInput, fixedHeight(dp(54)))
+
+        addLabel(container, "Красный уровень, минут")
+        container.addView(redInput, fixedHeight(dp(54)))
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Настройки")
@@ -410,45 +427,48 @@ class MainActivity : Activity() {
             .create()
 
         dialog.setOnShowListener {
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
-                val changingValue =
-                    changingInput.text.toString().toIntOrNull()
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val changingValue =
+                        changingInput.text.toString().toIntOrNull()
+                    val yellowValue =
+                        yellowInput.text.toString().toIntOrNull()
+                    val redValue =
+                        redInput.text.toString().toIntOrNull()
 
-                val reserveValue =
-                    reserveInput.text.toString().toIntOrNull()
+                    if (
+                        changingValue == null ||
+                        yellowValue == null ||
+                        redValue == null ||
+                        changingValue < 0 ||
+                        yellowValue < 0 ||
+                        redValue < 0
+                    ) {
+                        Toast.makeText(
+                            this,
+                            "Введи целые числа не меньше нуля",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@setOnClickListener
+                    }
 
-                if (
-                    changingValue == null ||
-                    reserveValue == null ||
-                    changingValue < 0 ||
-                    reserveValue < 0
-                ) {
-                    Toast.makeText(
-                        this,
-                        "Введи целое число не меньше нуля",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@setOnClickListener
+                    if (yellowValue + redValue > TOTAL_MINUTES) {
+                        Toast.makeText(
+                            this,
+                            "Сумма жёлтого и красного уровней не должна превышать 75 минут",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@setOnClickListener
+                    }
+
+                    changingMinutes = changingValue
+                    yellowMinutes = yellowValue
+                    redMinutes = redValue
+
+                    saveSettings()
+                    updateScreen()
+                    dialog.dismiss()
                 }
-
-                if (changingValue + reserveValue > TOTAL_MINUTES) {
-                    Toast.makeText(
-                        this,
-                        "Сумма настроек не должна превышать 75 минут",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@setOnClickListener
-                }
-
-                changingMinutes = changingValue
-                reserveMinutes = reserveValue
-
-                saveSettings()
-                updateScreen()
-                dialog.dismiss()
-            }
         }
 
         dialog.show()
@@ -472,7 +492,6 @@ class MainActivity : Activity() {
 
     private fun updateScreen() {
         val nowMillis = System.currentTimeMillis()
-        val entryTotal = entryHour * 60 + entryMinute
         val elapsedMillis = nowMillis - entryTimestampMillis
         val waitingForEntry = elapsedMillis < 0L
 
@@ -488,134 +507,94 @@ class MainActivity : Activity() {
             0
         }
 
-        /*
-         * Весь лимит — 75 минут.
-         * Время на переодевание делится пополам:
-         * половина до плавания, половина после.
-         *
-         * Пример: 10 минут переодевания, 5 минут резерва:
-         * 5 мин переодеться + 60 мин плавать +
-         * 5 мин переодеться + 5 мин резерва = 75 мин.
-         */
-
-        val changingBeforeSwim = changingMinutes / 2
-        val changingAfterSwim = changingMinutes - changingBeforeSwim
-
-        val swimMinutes =
-            TOTAL_MINUTES - changingMinutes - reserveMinutes
-
-        val poolExitOffset =
-            changingBeforeSwim + swimMinutes
-
-        val countdownStartOffset =
-            poolExitOffset + changingAfterSwim
-
-        val poolExitTime =
-            (entryTotal + poolExitOffset) % 1440
-
-        val deadlineTime =
-            (entryTotal + TOTAL_MINUTES) % 1440
-
-        val poolExitTimestamp =
-            entryTimestampMillis + poolExitOffset * 60_000L
-
-        val countdownStartTimestamp =
-            entryTimestampMillis + countdownStartOffset * 60_000L
-
         val deadlineTimestamp =
             entryTimestampMillis + TOTAL_MINUTES * 60_000L
 
-        val deadlineMinutesLeft =
-            TOTAL_MINUTES - elapsedMinutes
+        val remainingMillis =
+            (deadlineTimestamp - nowMillis).coerceAtLeast(0L)
 
-        val reserveCountdownStarted =
-            !waitingForEntry && nowMillis >= countdownStartTimestamp
+        val remainingSeconds =
+            (remainingMillis + 999L) / 1000L
 
-        entryTimeButton.text = formatTime(entryTotal)
+        val redStartMinute = TOTAL_MINUTES - redMinutes
+        val yellowStartMinute = redStartMinute - yellowMinutes
 
-        poolExitTimeText.text = if (reserveCountdownStarted) {
-            val millisLeft =
-                (deadlineTimestamp - nowMillis).coerceAtLeast(0L)
+        entryTimeButton.text = formatTime(entryHour * 60 + entryMinute)
 
-            val secondsLeft =
-                (millisLeft + 999L) / 1000L
+        poolExitTimeText.text =
+            if (waitingForEntry) {
+                formatMinutesSeconds(TOTAL_MINUTES * 60L)
+            } else {
+                formatMinutesSeconds(remainingSeconds)
+            }
 
-            formatMinutesSeconds(secondsLeft)
-        } else {
-            formatTime(poolExitTime)
+        val deadlineCalendar = Calendar.getInstance().apply {
+            timeInMillis = entryTimestampMillis
+            add(Calendar.MINUTE, TOTAL_MINUTES)
         }
 
-        deadlineText.text = formatTime(deadlineTime)
+        deadlineText.text = formatTime(
+            deadlineCalendar.get(Calendar.HOUR_OF_DAY) * 60 +
+                deadlineCalendar.get(Calendar.MINUTE)
+        )
+
+        currentTimeText.text = formatTime(
+            Calendar.getInstance().let {
+                it.get(Calendar.HOUR_OF_DAY) * 60 +
+                    it.get(Calendar.MINUTE)
+            }
+        )
 
         remainingText.text = when {
             waitingForEntry ->
                 "До входа: ${formatDuration(waitMinutes)}"
 
-            nowMillis < poolExitTimestamp ->
-                "До выхода из воды: ${formatDuration(
-                    ((poolExitTimestamp - nowMillis + 59_999L) / 60_000L).toInt()
-                )}"
+            elapsedMillis < changingMinutes / 2 * 60_000L ->
+                "Переодевание перед бассейном"
 
-            nowMillis < countdownStartTimestamp ->
-                "Переодевание после бассейна"
+            elapsedMinutes < redStartMinute - changingMinutes ->
+                "Время плавать!"
 
-            nowMillis < deadlineTimestamp ->
+            elapsedMinutes < TOTAL_MINUTES - redMinutes ->
+                "Скоро пора выходить"
+
+            elapsedMillis < TOTAL_MINUTES * 60_000L ->
                 "РЕЗЕРВ! ПОРА К ТУРНИКЕТУ"
 
             else ->
                 "ВРЕМЯ ВЫХОДИТЬ УЖЕ ПРОШЛО"
         }
 
-        // Жёлтая панель во время переодевания.
         val poolColor = when {
             waitingForEntry ->
                 Color.rgb(35, 105, 72)
 
-            nowMillis < poolExitTimestamp -> {
-                val millisUntilPoolExit =
-                    poolExitTimestamp - nowMillis
+            elapsedMillis >= TOTAL_MINUTES * 60_000L ->
+                Color.rgb(121, 85, 72)
 
-                when {
-                    millisUntilPoolExit > 10 * 60_000L ->
-                        Color.rgb(35, 105, 72)
+            elapsedMinutes >= redStartMinute ->
+                Color.rgb(190, 35, 42)
 
-                    millisUntilPoolExit > 5 * 60_000L ->
-                        Color.rgb(190, 135, 20)
-
-                    else ->
-                        Color.rgb(190, 135, 20)
-                }
-            }
-
-            nowMillis < countdownStartTimestamp ->
+            elapsedMinutes >= yellowStartMinute ->
                 Color.rgb(190, 160, 20)
 
             else ->
-                Color.rgb(190, 35, 42)
+                Color.rgb(35, 105, 72)
         }
 
         poolExitPanel.background =
             roundedBackground(poolColor, 22)
 
-        val deadlineColor = when {
-            waitingForEntry ->
-                Color.rgb(125, 35, 42)
-
-            deadlineMinutesLeft > 10 ->
-                Color.rgb(125, 35, 42)
-
-            deadlineMinutesLeft > 5 ->
-                Color.rgb(190, 35, 42)
-
-            else ->
-                Color.rgb(110, 0, 0)
-        }
-
         deadlinePanel.background =
-            roundedBackground(deadlineColor, 22)
+            roundedBackground(Color.rgb(125, 35, 42), 22)
+
+        currentTimePanel.background =
+            roundedBackground(Color.BLACK, 22)
 
         settingsSummary.text =
-            "Переодевание: $changingMinutes мин.  •  Запас: $reserveMinutes мин."
+            "Переодевание: $changingMinutes мин.  •  " +
+                "Жёлтый: $yellowMinutes мин.  •  " +
+                "Красный: $redMinutes мин."
     }
 
     private fun formatMinutesSeconds(totalSeconds: Long): String {
