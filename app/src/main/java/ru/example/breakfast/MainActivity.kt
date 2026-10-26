@@ -131,7 +131,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL or Gravity.CENTER_VERTICAL
-            setPadding(dp(18), dp(8), dp(18), dp(24))
+            setPadding(dp(18), dp(24), dp(18), dp(24))
         }
         scrollView.addView(
             root,
@@ -265,15 +265,15 @@ class MainActivity : Activity() {
         setContentView(scrollView)
     }
 
-    private fun matchWrap(): .LayoutParams =
-        .LayoutParams(
+    private fun matchWrap(): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
 
-    private fun createPanel(color: Int):  =
-        (this).apply {
-            orientation = .VERTICAL
+    private fun createPanel(color: Int): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(16), dp(22), dp(16), dp(22))
             background = roundedBackground(color, 22)
