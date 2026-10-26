@@ -1,0 +1,11 @@
+This XML file does not appear to have any style information associated with it. The document tree is shown below.
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<application android:allowBackup="true" android:label="Время плавать!" android:icon="@drawable/ic_porridge" android:roundIcon="@drawable/ic_porridge" android:supportsRtl="true" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+<activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="stateAlwaysHidden">
+<intent-filter>
+<action android:name="android.intent.action.MAIN"/>
+<category android:name="android.intent.category.LAUNCHER"/>
+</intent-filter>
+</activity>
+</application>
+</manifest>
