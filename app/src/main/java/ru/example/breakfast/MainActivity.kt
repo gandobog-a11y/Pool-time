@@ -1,3 +1,4 @@
+
 package ru.example.pool_time
 
 import android.app.Activity
@@ -151,7 +152,9 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            setPadding(dp(18), dp(18), dp(18), dp(24))
+
+            // Увеличенный отступ сверху
+            setPadding(dp(18), dp(48), dp(18), dp(24))
         }
 
         scrollView.addView(
@@ -522,14 +525,9 @@ class MainActivity : Activity() {
         val deadlineTimestamp =
             entryTimestampMillis + TOTAL_MINUTES * 60_000L
 
-        val poolMinutesLeft =
-            poolExitOffset - elapsedMinutes
-
         val deadlineMinutesLeft =
             TOTAL_MINUTES - elapsedMinutes
 
-        // Резервный отсчёт начинается после плавания
-        // и времени на переодевание после бассейна.
         val reserveCountdownStarted =
             !waitingForEntry && nowMillis >= countdownStartTimestamp
 
@@ -568,20 +566,29 @@ class MainActivity : Activity() {
                 "ВРЕМЯ ВЫХОДИТЬ УЖЕ ПРОШЛО"
         }
 
+        // Жёлтая панель во время переодевания.
         val poolColor = when {
             waitingForEntry ->
                 Color.rgb(35, 105, 72)
 
-            nowMillis < poolExitTimestamp &&
-                (poolExitTimestamp - nowMillis) > 10 * 60_000L ->
-                Color.rgb(35, 105, 72)
+            nowMillis < poolExitTimestamp -> {
+                val millisUntilPoolExit =
+                    poolExitTimestamp - nowMillis
 
-            nowMillis < poolExitTimestamp &&
-                (poolExitTimestamp - nowMillis) > 5 * 60_000L ->
-                Color.rgb(190, 135, 20)
+                when {
+                    millisUntilPoolExit > 10 * 60_000L ->
+                        Color.rgb(35, 105, 72)
+
+                    millisUntilPoolExit > 5 * 60_000L ->
+                        Color.rgb(190, 135, 20)
+
+                    else ->
+                        Color.rgb(190, 135, 20)
+                }
+            }
 
             nowMillis < countdownStartTimestamp ->
-                Color.rgb(190, 35, 42)
+                Color.rgb(190, 160, 20)
 
             else ->
                 Color.rgb(190, 35, 42)
