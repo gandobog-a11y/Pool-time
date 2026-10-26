@@ -12,9 +12,12 @@ import android.os.Handler
 import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -39,6 +42,7 @@ class MainActivity : Activity() {
         private const val KEY_RED = "red_minutes"
         private const val KEY_YELLOW = "yellow_minutes"
         private const val KEY_INITIALIZED = "initialized"
+        private const val KEY_CONTENT_POSITION = "content_position_dp"
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -52,6 +56,16 @@ class MainActivity : Activity() {
     private lateinit var poolExitPanel: LinearLayout
     private lateinit var deadlinePanel: LinearLayout
     private lateinit var currentTimePanel: LinearLayout
+
+    private lateinit var contentPositionSpacer: View
+    private lateinit var contentFrame: FrameLayout
+    private lateinit var dragOverlay: View
+    private lateinit var moveButton: Button
+
+    private var contentPositionDp = 0
+    private var moveMode = false
+    private var dragStartY = 0f
+    private var dragStartPositionDp = 0
 
     private var entryHour = 0
     private var entryMinute = 0
@@ -125,6 +139,11 @@ class MainActivity : Activity() {
             0L
         )
 
+        contentPositionDp = prefs.getInt(
+            KEY_CONTENT_POSITION,
+            0
+        ).coerceIn(-120, 200)
+
         if (!initialized || entryTimestampMillis == 0L) {
             entryTimestampMillis =
                 calendarForToday(entryHour, entryMinute).timeInMillis
@@ -169,7 +188,7 @@ class MainActivity : Activity() {
 
         scrollView.addView(
             root,
-            android.widget.FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
@@ -221,9 +240,78 @@ class MainActivity : Activity() {
             LinearLayout.LayoutParams(dp(58), dp(52))
         )
 
+        moveButton = Button(this).apply {
+            text = "↕"
+            textSize = 22f
+            setTextColor(Color.WHITE)
+            background = roundedBackground(Color.rgb(45, 57, 76), 14)
+
+            setOnClickListener {
+                toggleMoveMode()
+            }
+
+            setOnLongClickListener {
+                resetContentPosition()
+                true
+            }
+        }
+
+        header.addView(
+            moveButton,
+            LinearLayout.LayoutParams(dp(48), dp(52)).apply {
+                leftMargin = dp(6)
+            }
+        )
+
         root.addView(header, matchWrap())
 
-        addLabel(root, "Вход через турникет")
+        contentPositionSpacer = View(this)
+
+        root.addView(
+            contentPositionSpacer,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(contentPositionDp.coerceAtLeast(0))
+            )
+        )
+
+        contentFrame = FrameLayout(this)
+
+        val contentBlock = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+
+        contentFrame.addView(
+            contentBlock,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        dragOverlay = View(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+            visibility = View.GONE
+            isClickable = true
+            contentDescription = "Перетащить блок"
+
+            setOnTouchListener { _, event ->
+                handleDragTouch(event)
+            }
+        }
+
+        contentFrame.addView(
+            dragOverlay,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        root.addView(contentFrame, matchWrap())
+        applyContentPosition()
+
+        addLabel(contentBlock, "Вход через турникет")
 
         entryTimeButton = Button(this).apply {
             textSize = 34f
@@ -233,7 +321,7 @@ class MainActivity : Activity() {
             setOnClickListener { showEntryTimePicker() }
         }
 
-        root.addView(
+        contentBlock.addView(
             entryTimeButton,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -271,7 +359,7 @@ class MainActivity : Activity() {
             matchWrap().apply { topMargin = dp(8) }
         )
 
-        root.addView(
+        contentBlock.addView(
             poolExitPanel,
             matchWrap().apply { bottomMargin = dp(18) }
         )
@@ -312,7 +400,7 @@ class MainActivity : Activity() {
             matchWrap().apply { topMargin = dp(8) }
         )
 
-        root.addView(
+        contentBlock.addView(
             deadlinePanel,
             matchWrap().apply { bottomMargin = dp(8) }
         )
@@ -328,12 +416,97 @@ class MainActivity : Activity() {
 
         currentTimePanel.addView(currentTimeText, matchWrap())
 
-        root.addView(
+        contentBlock.addView(
             currentTimePanel,
             matchWrap().apply { bottomMargin = dp(16) }
         )
 
         setContentView(scrollView)
+    }
+
+    private fun toggleMoveMode() {
+        moveMode = !moveMode
+
+        dragOverlay.visibility =
+            if (moveMode) View.VISIBLE else View.GONE
+
+        moveButton.text = if (moveMode) "✓" else "↕"
+
+        moveButton.background = roundedBackground(
+            if (moveMode) Color.rgb(190, 160, 20)
+            else Color.rgb(45, 57, 76),
+            14
+        )
+
+        Toast.makeText(
+            this,
+            if (moveMode) {
+                "Перетаскивай блок пальцем. ✓ — готово. Долгое нажатие ↕ — сброс."
+            } else {
+                "Положение сохранено"
+            },
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun handleDragTouch(event: MotionEvent): Boolean {
+        when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                dragStartY = event.rawY
+                dragStartPositionDp = contentPositionDp
+                return true
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                val deltaDp = (
+                    (event.rawY - dragStartY) /
+                        resources.displayMetrics.density
+                    ).toInt()
+
+                contentPositionDp =
+                    (dragStartPositionDp + deltaDp).coerceIn(-120, 200)
+
+                applyContentPosition()
+                return true
+            }
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                prefs.edit()
+                    .putInt(KEY_CONTENT_POSITION, contentPositionDp)
+                    .apply()
+                return true
+            }
+        }
+
+        return moveMode
+    }
+
+    private fun applyContentPosition() {
+        contentPositionSpacer.layoutParams =
+            contentPositionSpacer.layoutParams.apply {
+                height = dp(contentPositionDp.coerceAtLeast(0))
+            }
+
+        contentPositionSpacer.requestLayout()
+
+        contentFrame.translationY =
+            dp(contentPositionDp.coerceAtMost(0)).toFloat()
+    }
+
+    private fun resetContentPosition() {
+        contentPositionDp = 0
+        applyContentPosition()
+
+        prefs.edit()
+            .putInt(KEY_CONTENT_POSITION, 0)
+            .apply()
+
+        Toast.makeText(
+            this,
+            "Исходное положение восстановлено",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun matchWrap(): LinearLayout.LayoutParams =
